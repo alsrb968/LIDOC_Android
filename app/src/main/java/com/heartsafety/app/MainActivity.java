@@ -47,8 +47,8 @@ public class MainActivity extends AppCompatActivity {
     private SimpleAdapter adapterDevice;
 
     //list - Device 목록 저장
-    private List<Map<String,String>> dataPaired;
-    private List<Map<String,String>> dataDevice;
+    private List<Map<String, String>> dataPaired;
+    private List<Map<String, String>> dataDevice;
     private List<BluetoothDevice> bluetoothDevices;
     private int selectDevice;
 
@@ -279,7 +279,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         //1. 블루투스가 꺼져있으면 활성화
-        if(!mBluetoothAdapter.isEnabled()){
+        if (!mBluetoothAdapter.isEnabled()) {
             mBluetoothAdapter.enable(); //강제 활성화
         }
 
@@ -407,8 +407,7 @@ public class MainActivity extends AppCompatActivity {
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     Log.d("Granted");
                     startDiscover();
-                }
-                else {
+                } else {
                     Log.w("Denied");
                 }
             }
@@ -416,7 +415,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void startDiscover(){
+    private void startDiscover() {
         if (mBluetoothAdapter != null) {
             if (mBluetoothAdapter.isDiscovering())
                 mBluetoothAdapter.cancelDiscovery();
