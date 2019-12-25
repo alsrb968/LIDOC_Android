@@ -31,7 +31,7 @@ public class MainActivity extends AppCompatActivity {
     private ActivityMainBinding mBinding;
 
     //블루투스 요청 액티비티 코드
-    private static final int REQUEST_ACCESS_BLUETOOTH = 100;
+    private static final int REQUEST_ENABLE_BLUETOOTH = 100;
     private static final int REQUEST_ACCESS_COARSE_LOCATION = 101;
     private static final int REQUEST_ACCESS_FINE_LOCATION = 102;
 
@@ -66,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         mBinding.setOnClickHandler(new OnClickHandler());
-        discoverDevices();
+        requestPermissions();
     }
 
     @Override
@@ -82,13 +82,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_ACCESS_BLUETOOTH) {//블루투스 활성화 승인
+        if (requestCode == REQUEST_ENABLE_BLUETOOTH) {//블루투스 활성화 승인
             if (resultCode == Activity.RESULT_OK) {
                 getListPairedDevice();
             } else {//블루투스 활성화 거절
                 Snackbar.make(mBinding.getRoot(), "블루투스를 활성화해야 합니다.", Snackbar.LENGTH_LONG).show();
                 finish();
-                return;
             }
         }
     }
@@ -114,26 +113,29 @@ public class MainActivity extends AppCompatActivity {
         mBluetoothStateReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                //BluetoothListAdapter.EXTRA_STATE : 블루투스의 현재상태 변화
-                int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1);
+                String action = intent.getAction();
+                if (action == null) return;
+                if (action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)) {
+                    //BluetoothListAdapter.EXTRA_STATE : 블루투스의 현재상태 변화
+                    int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1);
+                    //블루투스 활성화
+                    switch (state) {
+                        case BluetoothAdapter.STATE_ON:
+                            mBinding.txtState.setText("블루투스 활성화");
+                            break;
 
-                //블루투스 활성화
-                switch (state) {
-                    case BluetoothAdapter.STATE_ON:
-                        mBinding.txtState.setText("블루투스 활성화");
-                        break;
+                        case BluetoothAdapter.STATE_TURNING_ON:
+                            mBinding.txtState.setText("블루투스 활성화 중...");
+                            break;
 
-                    case BluetoothAdapter.STATE_TURNING_ON:
-                        mBinding.txtState.setText("블루투스 활성화 중...");
-                        break;
+                        case BluetoothAdapter.STATE_OFF:
+                            mBinding.txtState.setText("블루투스 비활성화");
+                            break;
 
-                    case BluetoothAdapter.STATE_OFF:
-                        mBinding.txtState.setText("블루투스 비활성화");
-                        break;
-
-                    case BluetoothAdapter.STATE_TURNING_OFF:
-                        mBinding.txtState.setText("블루투스 비활성화 중...");
-                        break;
+                        case BluetoothAdapter.STATE_TURNING_OFF:
+                            mBinding.txtState.setText("블루투스 비활성화 중...");
+                            break;
+                    }
                 }
             }
         };
@@ -219,18 +221,22 @@ public class MainActivity extends AppCompatActivity {
         mBluetoothScanModeReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                int state = intent.getIntExtra(BluetoothAdapter.EXTRA_SCAN_MODE, -1);
-                switch (state) {
-                    case BluetoothAdapter.SCAN_MODE_CONNECTABLE:
-                    case BluetoothAdapter.SCAN_MODE_NONE:
-                        mBinding.chkFindMe.setChecked(false);
-                        mBinding.chkFindMe.setEnabled(true);
-                        Snackbar.make(mBinding.getRoot(), "검색응답 모드 종료", Snackbar.LENGTH_LONG).show();
-                        break;
+                String action = intent.getAction();
+                if (action == null) return;
+                if (action.equals(BluetoothAdapter.ACTION_SCAN_MODE_CHANGED)) {
+                    int state = intent.getIntExtra(BluetoothAdapter.EXTRA_SCAN_MODE, -1);
+                    switch (state) {
+                        case BluetoothAdapter.SCAN_MODE_CONNECTABLE:
+                        case BluetoothAdapter.SCAN_MODE_NONE:
+                            mBinding.chkFindMe.setChecked(false);
+                            mBinding.chkFindMe.setEnabled(true);
+                            Snackbar.make(mBinding.getRoot(), "검색응답 모드 종료", Snackbar.LENGTH_LONG).show();
+                            break;
 
-                    case BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE:
-                        Snackbar.make(mBinding.getRoot(), "다른 블루투스 기기에서 내 휴대폰을 찾을 수 있습니다.", Snackbar.LENGTH_LONG).show();
-                        break;
+                        case BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE:
+                            Snackbar.make(mBinding.getRoot(), "다른 블루투스 기기에서 내 휴대폰을 찾을 수 있습니다.", Snackbar.LENGTH_LONG).show();
+                            break;
+                    }
                 }
             }
         };
@@ -281,7 +287,7 @@ public class MainActivity extends AppCompatActivity {
         //2. 블루투스가 꺼져있으면 사용자에게 활성화 요청하기
         if (!mBluetoothAdapter.isEnabled()) {
             Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(intent, REQUEST_ACCESS_BLUETOOTH);
+            startActivityForResult(intent, REQUEST_ENABLE_BLUETOOTH);
         } else {
             getListPairedDevice();
         }
@@ -342,7 +348,7 @@ public class MainActivity extends AppCompatActivity {
         adapterPaired.notifyDataSetChanged();
     }
 
-    private void discoverDevices() {
+    private void requestPermissions() {
         int result;
         int request;
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
